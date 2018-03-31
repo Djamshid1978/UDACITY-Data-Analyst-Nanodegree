@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+  <title>Titanic Data Visualization</title>
+  <style>
+
+  body  {position: relative;
+         margin: auto 15%;
+        } 
+
+  h1     {margin-right: : 235px;
+    }
+  
+  .axis line,
+  .axis path {
+         fill: none;
+         stroke: #000;
+         shape-rendering: crispEdges;
+         stroke-width: 1
+        }
+
+  </style>
+  </head>
+
+<body>
+
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+
+  <h1>
+  <p>Graphical chart shows the ratio of survived passengers by class in the Titanic tragedy</p>
+  </h1>
+
+  <div id="chartContainer"></div>
+      
+<script>
+  
+  // Define SVG margin, width and height as variable.
+  var margin = {top: 20, right: 50, bottom: 80, left: 50},
+      width = 960 - margin.left - margin.right,
+      height = 550 - margin.top - margin.bottom;
+
+  // Create scale 
+  var xScale = d3.scale.ordinal()
+      .rangeRoundBands([margin.left, width],0.6);
+
+  var yScale = d3.scale.linear()
+      .rangeRound([height, margin.top]);
+
+  // Add scales to axis, set x, y and color
+  var x_axis = d3.svg.axis()
+      .scale(xScale)
+      .orient("bottom");
+   
+  var color = d3.scale.ordinal()
+      .range(["#6b486b", "#a05d56"]);
+
+  var y_axis = d3.svg.axis()
+      .scale(yScale)
+      .orient("left");
+
+  // Append svg element
+  var svg = d3.select("#chartContainer").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+  // Load data file and add error handling in case the file fail to load
+  d3.tsv("Survived_by_Pclass.tsv", function(data) {
+      var ratio = ["S_ratio", "D_ratio"];
+      var dataStackLayout = d3.layout.stack()(ratio.map(function(temp) {
+          return data.map(function(d) {
+              return {x : d.Pclass,
+                  y : +d[temp] };
+          });
+      }));
+
+  // Select the range of the data
+  xScale.domain(dataStackLayout[0].map(function(d) { return d.x; }));
+  yScale.domain([0, 1]);
+
+  // Create layers in the stacked bar chart
+  var layer = svg.selectAll(".stack")
+              .data(dataStackLayout)
+              .enter()
+              .append("g")
+              .attr("class", "stack")
+              .style("fill", function(d, i) { return color(i); });
+
+  var rect = layer.selectAll("rect")
+              .data(function(d) { return d;})
+              .enter()
+              .append("rect")
+              .attr("x", function(d) { return xScale(d.x); })
+              .attr("y", function(d) { return yScale(d.y + d.y0); })
+              .attr("height", function(d) { return yScale(d.y0) - yScale(d.y + d.y0); })
+              .attr("width", xScale.rangeBand())
+              .on("mouseover", function() { tooltip.style("display", null);})
+              .on("mousemove", function(d) {
+                  var xPosition = d3.mouse(this)[0] - 15;
+                  var yPosition = d3.mouse(this)[1] - 25;
+                  tooltip.attr("transform", "translate(" + xPosition + "," +
+                      yPosition + ")");
+                  tooltip.select("text").text("Ratio: "+d.y);})
+              .on("mouseout", function() { tooltip.style("display", "none");});
+
+          
+   // Append group and insert x_axis and label
+          svg.append("g")
+             .attr("class", "axis")
+             .attr("transform", "translate(0," + height + ")")
+             .call(x_axis)
+             .append("text")
+             .attr("text-anchor","middle")
+             .attr("transform","translate("+(width/2)+","+margin.bottom+")")
+             .style("font-size", 25)
+             .text("Passengers by Class");
+      
+   // Append group and insert x_axis and label 
+         svg.append("g")
+            .attr("class", "axis")
+            .call(y_axis)
+            .attr("transform","translate("+margin.right+","+0+")")
+            .append("text")
+            .attr("text-anchor","end")
+            .attr("transform","translate("+(-margin.right)+","+(height/2-margin.bottom)+")rotate(-90)")
+            .style("font-size",25)
+            .text("Ratio of Passengers");
+
+   // Prep the tooltip 
+   var tooltip = svg.append("g")
+                    .attr("class", "tooltip")
+                    .style("display", "none");
+
+       tooltip.append("rect")
+              .attr("width", 65)
+              .attr("height", 20)
+              .attr("fill", "white")
+              .style("opacity", 0.5);
+
+       tooltip.append("text")
+              .attr("x", 30)
+              .attr("dy", "1.2em")
+              .style("text-anchor", "middle")
+              .attr("font-size", "12px")
+              .attr("font-weight", "bold");
+
+      // Draw legend
+      var legend = svg.selectAll(".legend")
+              .data(color.domain().slice().reverse())
+              .enter()
+              .append("g")
+              .attr("class", "legend")
+              .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+      legend.append("rect")
+              .attr("x", width - 18)
+              .attr("width", 18)
+              .attr("height", 18)
+              .style("fill", color)
+
+      legend.append("text")
+              .attr("x", width - 20)
+              .attr("y", 9)
+              .attr("dy", ".35em")
+              .style("text-anchor", "end")
+              .text(function(d, i) { switch (i) {
+                  case 0: return "Dead";
+                  case 1: return "Survived"; }});
+  });
+
+</script>
+</body>
+</html>
